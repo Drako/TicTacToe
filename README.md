@@ -20,3 +20,8 @@ Both generate an HTML file which can be opened with a web browser.
 
 Alternatively one can compile into a JS file with the `--output<output-file>` parameter.
 This way the element can be embedded into a bigger project.
+
+## Demo
+
+A live running version can be found [here](https://playground.drako.guru/TicTacToe/).
+
