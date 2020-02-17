@@ -11,7 +11,7 @@ import Random
 
 chunked : Int -> Array a -> Array (Array a)
 chunked size source =
-    initialize (length source // 3) (\chunk -> slice (size * chunk) (size * chunk + size) source)
+    initialize (length source // size) (\chunk -> slice (size * chunk) (size * chunk + size) source)
 
 
 type Player
