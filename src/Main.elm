@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import Array exposing (Array, filter, get, indexedMap, initialize, length, set, slice, toList)
-import Browser
+import Browser exposing (Document)
 import Css exposing (..)
 import Css.Global exposing (descendants, typeSelector)
 import Html.Styled exposing (..)
@@ -295,10 +295,17 @@ init _ =
     ( Starting, Random.generate PlayerSelected randomPlayer )
 
 
+documentView : GameState -> Document Message
+documentView model =
+    { title = "TicTacToe"
+    , body = [ (view >> toUnstyled) model ]
+    }
+
+
 main =
-    Browser.element
+    Browser.document
         { init = init
         , update = update
         , subscriptions = subscriptions
-        , view = view >> toUnstyled
+        , view = documentView
         }
