@@ -2,8 +2,10 @@ module Main exposing (main)
 
 import Array exposing (Array, filter, get, indexedMap, initialize, length, set, slice, toList)
 import Browser
-import Html exposing (Html, button, div, p, table, td, text, tr)
-import Html.Events exposing (onClick)
+import Css exposing (auto, border3, borderBottom, borderCollapse, borderLeft, borderRight, borderTop, center, collapse, firstChild, fontFamilies, fontSize, fontWeight, height, int, lastChild, margin, px, rgb, solid, textAlign, width)
+import Css.Global exposing (descendants, typeSelector)
+import Html.Styled exposing (..)
+import Html.Styled.Events exposing (onClick)
 import Random
 
 
@@ -204,7 +206,7 @@ renderCell : Game -> Int -> CellState -> Html Message
 renderCell game cellNr cellState =
     case cellState of
         Free ->
-            td [ onClick (MarkCell cellNr game.currentPlayer) ] [ text (String.fromInt (cellNr + 1)) ]
+            td [ onClick (MarkCell cellNr game.currentPlayer) ] [ text "" ]
 
         Crossed ->
             td [] [ text "X" ]
@@ -223,26 +225,67 @@ renderLine game lineNr line =
     tr [] (toList (indexedMap (\cellNr cellState -> renderCell game (cellNr + lineNr * lineLength) cellState) line))
 
 
+gameComponent : List (Attribute Message) -> List (Html Message) -> Html Message
+gameComponent =
+    styled div
+        [ width (px 300)
+        , height (px 100)
+        , margin auto
+        , textAlign center
+        , fontFamilies
+            [ "HelveticaNeue-Light"
+            , "Helvetica Neue Light"
+            , "Helvetica Neue"
+            , "Helvetica"
+            , "Arial"
+            , "Lucida Grande"
+            , "sans-serif"
+            ]
+        , fontWeight (int 300)
+        , fontSize (px 20)
+        ]
+
+
+boardComponent : List (Attribute Message) -> List (Html Message) -> Html Message
+boardComponent =
+    styled table
+        [ borderCollapse collapse
+        , margin auto
+        , descendants
+            [ typeSelector "td"
+                [ border3 (px 2) solid (rgb 0 0 0)
+                , width (px 25)
+                , height (px 25)
+                , textAlign center
+                ]
+            , typeSelector "tr" [ firstChild [ descendants [ typeSelector "td" [ borderTop (px 0) ] ] ] ]
+            , typeSelector "tr" [ lastChild [ descendants [ typeSelector "td" [ borderBottom (px 0) ] ] ] ]
+            , typeSelector "tr" [ descendants [ typeSelector "td" [ firstChild [ borderLeft (px 0) ] ] ] ]
+            , typeSelector "tr" [ descendants [ typeSelector "td" [ lastChild [ borderRight (px 0) ] ] ] ]
+            ]
+        ]
+
+
 view : GameState -> Html Message
 view model =
     case model of
         Starting ->
-            div [] [ text "Selecting starting player..." ]
+            gameComponent [] [ text "Selecting starting player..." ]
 
         Playing game ->
-            div []
-                [ p [] [ text ("Current player is " ++ symbolOf game.currentPlayer) ]
-                , table [] (toList (indexedMap (renderLine game) (chunked lineLength game.field)))
+            gameComponent []
+                [ p [] [ text ("Current player is " ++ symbolOf game.currentPlayer ++ ".") ]
+                , boardComponent [] (toList (indexedMap (renderLine game) (chunked lineLength game.field)))
                 ]
 
         Tie ->
-            div []
+            gameComponent []
                 [ p [] [ text "The game ended with a tie." ]
                 , button [ onClick Restart ] [ text "Play again!" ]
                 ]
 
         Winner player ->
-            div []
+            gameComponent []
                 [ p [] [ text ("Player " ++ symbolOf player ++ " won the game.") ]
                 , button [ onClick Restart ] [ text "Play again!" ]
                 ]
@@ -258,5 +301,5 @@ main =
         { init = init
         , update = update
         , subscriptions = subscriptions
-        , view = view
+        , view = view >> toUnstyled
         }
