@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Array exposing (Array, filter, get, indexedMap, initialize, length, set, slice, toList)
 import Browser
-import Css exposing (auto, border3, borderBottom, borderCollapse, borderLeft, borderRight, borderTop, center, collapse, firstChild, fontFamilies, fontSize, fontWeight, height, int, lastChild, margin, px, rgb, solid, textAlign, width)
+import Css exposing (..)
 import Css.Global exposing (descendants, typeSelector)
 import Html.Styled exposing (..)
 import Html.Styled.Events exposing (onClick)
@@ -229,7 +229,6 @@ gameComponent : List (Attribute Message) -> List (Html Message) -> Html Message
 gameComponent =
     styled div
         [ width (px 300)
-        , height (px 100)
         , margin auto
         , textAlign center
         , fontFamilies
@@ -248,7 +247,7 @@ gameComponent =
 
 boardComponent : List (Attribute Message) -> List (Html Message) -> Html Message
 boardComponent =
-    styled table
+    styled Html.Styled.table
         [ borderCollapse collapse
         , margin auto
         , descendants
