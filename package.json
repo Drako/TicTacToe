@@ -1,0 +1,21 @@
+{
+  "name": "tictactoe",
+  "version": "1.0.0",
+  "description": "TicTacToe game in elm",
+  "scripts": {
+    "build": "npx elm make --optimize src/Main.elm --output=public/index.html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Drako/TicTacToe.git"
+  },
+  "author": "Felix Bytow <drako@drako.guru>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Drako/TicTacToe/issues"
+  },
+  "homepage": "https://github.com/Drako/TicTacToe#readme",
+  "dependencies": {
+    "elm": "^0.19.1-3"
+  }
+}
