@@ -1,6 +1,14 @@
+# intellij idea / webstorm
 .idea/
+
+# macos shit
 .DS_Store
+
+# elm stuff :O
 elm-stuff/
-index.html
+
+# nodejs dependencies
 node_modules/
-public/
+
+# generated
+*.js
