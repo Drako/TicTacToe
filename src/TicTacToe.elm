@@ -1,47 +1,14 @@
-module TicTacToe exposing (documentView, init, subscriptions, update)
+module TicTacToe exposing (..)
 
 import Array exposing (..)
 import Browser exposing (Document)
+import CellState exposing (CellState(..))
 import Helpers exposing (chunked, getOr)
 import Html.Styled exposing (..)
 import Html.Styled.Events exposing (onClick)
+import Player exposing (Player, opponentOf)
 import Random
 import Ui
-
-
-type alias Player =
-    { symbol : String
-    , marker : CellState
-    }
-
-
-cross : Player
-cross =
-    { symbol = "X"
-    , marker = Cross
-    }
-
-
-circle : Player
-circle =
-    { symbol = "O"
-    , marker = Circle
-    }
-
-
-opponentOf : Player -> Player
-opponentOf player =
-    if player == cross then
-        circle
-
-    else
-        cross
-
-
-type CellState
-    = Free
-    | Cross
-    | Circle
 
 
 type GameState
@@ -51,14 +18,12 @@ type GameState
     | Winner Player
 
 
-withGame : GameState -> (Game -> a) -> Maybe a
-withGame model handler =
-    case model of
-        Playing game ->
-            Just (handler game)
+type alias WithPlayer record =
+    { record | currentPlayer : Player }
 
-        _ ->
-            Nothing
+
+type alias WithField record =
+    { record | field : Array CellState }
 
 
 type alias Game =
@@ -73,63 +38,57 @@ type Message
     | Restart
 
 
-randomPlayer : Random.Generator Player
-randomPlayer =
-    Random.uniform cross [ circle ]
-
-
 update : Message -> GameState -> ( GameState, Cmd Message )
 update msg model =
-    case msg of
-        PlayerSelected player ->
+    case ( msg, model ) of
+        ( PlayerSelected player, Starting ) ->
             ( Playing (initGame player)
             , Cmd.none
             )
 
-        MarkCell cellNr ->
-            withGame model
-                (\game ->
-                    if isWinningMove game cellNr then
-                        ( Winner game.currentPlayer
-                        , Cmd.none
-                        )
-
-                    else if isTie game then
-                        ( Tie
-                        , Cmd.none
-                        )
-
-                    else
-                        ( Playing (game |> markCell cellNr |> switchPlayer)
-                        , Cmd.none
-                        )
+        ( MarkCell cellNr, Playing game ) ->
+            if isWinningMove game cellNr then
+                ( Winner game.currentPlayer
+                , Cmd.none
                 )
-                |> Maybe.withDefault ( model, Cmd.none )
 
-        Restart ->
+            else if isTie game then
+                ( Tie
+                , Cmd.none
+                )
+
+            else
+                ( Playing (game |> markCell cellNr |> switchPlayer)
+                , Cmd.none
+                )
+
+        ( Restart, _ ) ->
             init ()
 
+        _ ->
+            ( model, Cmd.none )
 
-switchPlayer : Game -> Game
+
+switchPlayer : WithPlayer record -> WithPlayer record
 switchPlayer game =
     { game | currentPlayer = opponentOf game.currentPlayer }
 
 
 markCell : Int -> Game -> Game
 markCell cellNr game =
-    { game | field = set cellNr game.currentPlayer.marker game.field }
+    { game | field = set cellNr (Taken game.currentPlayer) game.field }
 
 
 initGame : Player -> Game
 initGame startingPlayer =
     { currentPlayer = startingPlayer
-    , field = initialize boardSize (always Free)
+    , field = repeat boardSize Free
     }
 
 
-isTie : Game -> Bool
-isTie game =
-    length (filter ((==) Free) game.field) == 1
+isTie : WithField record -> Bool
+isTie { field } =
+    field |> filter ((==) Free) |> length |> (==) 1
 
 
 lines : Array (List (List Int))
@@ -150,28 +109,36 @@ lines =
 isWinningMove : Game -> Int -> Bool
 isWinningMove game cellNr =
     let
-        match : CellState -> List Int -> Bool
-        match cellState listOfCells =
-            listOfCells |> List.map (\line -> getOr line game.field Free) |> List.all ((==) cellState)
+        takenBy : Player -> CellState -> Bool
+        takenBy player state =
+            case state of
+                Taken owner ->
+                    player == owner
+
+                _ ->
+                    False
+
+        match : Player -> List Int -> Bool
+        match player listOfCells =
+            listOfCells |> List.map (\line -> getOr line game.field Free) |> List.all (takenBy player)
 
         checkCells : List (List Int) -> Bool
         checkCells linesToCheck =
-            linesToCheck |> List.any (match game.currentPlayer.marker)
+            linesToCheck |> List.any (match game.currentPlayer)
     in
     get cellNr lines |> Maybe.map checkCells |> Maybe.withDefault False
 
 
 renderCell : Int -> CellState -> Html Message
 renderCell cellNr cellState =
-    case cellState of
-        Free ->
-            td [ onClick (MarkCell cellNr) ] [ text "" ]
+    td
+        (if cellState == Free then
+            [ onClick (MarkCell cellNr) ]
 
-        Cross ->
-            td [] [ text "X" ]
-
-        Circle ->
-            td [] [ text "O" ]
+         else
+            []
+        )
+        [ text <| CellState.symbolOf cellState ]
 
 
 lineLength : Int
@@ -186,7 +153,12 @@ boardSize =
 
 renderLine : Int -> Array CellState -> Html Message
 renderLine lineNr line =
-    tr [] (toList (indexedMap (\cellNr cellState -> renderCell (cellNr + lineNr * lineLength) cellState) line))
+    let
+        render : Int -> CellState -> Html Message
+        render cellNr cellState =
+            renderCell (cellNr + lineNr * lineLength) cellState
+    in
+    indexedMap render line |> toList |> tr []
 
 
 view : GameState -> Html Message
@@ -197,8 +169,9 @@ view model =
 
         Playing game ->
             Ui.game
-                [ Ui.caption ("Current player is " ++ game.currentPlayer.symbol ++ ".") |> Html.Styled.map never
-                , Ui.board (toList (indexedMap renderLine (chunked lineLength game.field)))
+                [ Ui.caption ("Current player is " ++ Player.symbolOf game.currentPlayer ++ ".")
+                    |> Html.Styled.map never
+                , chunked lineLength game.field |> indexedMap renderLine |> toList |> Ui.board
                 ]
 
         Tie ->
@@ -209,14 +182,14 @@ view model =
 
         Winner player ->
             Ui.game
-                [ Ui.caption ("Player " ++ player.symbol ++ " won the game.") |> Html.Styled.map never
+                [ Ui.caption ("Player " ++ Player.symbolOf player ++ " won the game.") |> Html.Styled.map never
                 , Ui.textButton [ onClick Restart ] "Play again!"
                 ]
 
 
 init : () -> ( GameState, Cmd Message )
 init _ =
-    ( Starting, Random.generate PlayerSelected randomPlayer )
+    ( Starting, Random.generate PlayerSelected Player.random )
 
 
 subscriptions : GameState -> Sub Message
